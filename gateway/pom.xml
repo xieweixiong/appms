@@ -1,0 +1,142 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>appms</artifactId>
+        <groupId>com.cn.project</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>gateway</artifactId>
+
+    <properties>
+        <kotlin.version>1.1.51</kotlin.version>
+        <docker.image.prefix>docker.csg.cn/dxms</docker.image.prefix>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-eureka-client</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-webflux</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-gateway</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.isomorphism</groupId>
+            <artifactId>token-bucket</artifactId>
+            <version>1.7</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.projectreactor</groupId>
+            <artifactId>reactor-test</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.assertj</groupId>
+            <artifactId>assertj-core</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-stdlib</artifactId>
+            <version>${kotlin.version}</version>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.jetbrains.kotlin</groupId>
+            <artifactId>kotlin-reflect</artifactId>
+            <version>${kotlin.version}</version>
+            <optional>true</optional>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-openfeign</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-starter-netflix-hystrix</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>com.alibaba</groupId>
+            <artifactId>fastjson</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-web</artifactId>
+            <version>5.0.6.RELEASE</version>
+        </dependency>
+
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!-- tag::plugin[] -->
+            <!-- 配置docker maven插件，绑定install生命周期，在运行maven install时生成docker镜像 -->
+            <plugin>
+                <groupId>com.spotify</groupId>
+                <artifactId>docker-maven-plugin</artifactId>
+                <version>1.1.0</version>
+                <executions>
+                    <execution>
+                        <phase>deploy</phase>
+                        <goals>
+                            <goal>build</goal>
+                            <goal>tag</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <serverId>docker-hub</serverId>
+                    <registryUrl>https://docker.csg.cn</registryUrl>
+                    <!-- 修改这里的docker节点ip，需要打开docker节点的远程管理端口2375，
+                    具体如何配置可以参照之前的docker安装和配置的文章 -->
+                    <dockerHost>http://10.111.124.109:2375</dockerHost>
+                    <imageName>${docker.image.prefix}/${project.artifactId}</imageName>
+                    <baseImage>docker.csg.cn/library/java:8</baseImage>
+                    <skipDockerBuild>false</skipDockerBuild>
+                    <skipDockerTag>false</skipDockerTag>
+                    <!-- 这里的entryPoint定义了容器启动时的运行命令，容器启动时运行
+                    java -jar 包名 , -Djava.security.egd这个配置解决tomcat8启动时，
+                    因为需要收集环境噪声来生成安全随机数导致启动过慢的问题-->
+                    <entryPoint>
+                        ["java", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/${project.build.finalName}.jar"]
+                    </entryPoint>
+                    <resources>
+                        <resource>
+                            <targetPath>/</targetPath>
+                            <directory>${project.build.directory}</directory>
+                            <include>${project.build.finalName}.jar</include>
+                        </resource>
+                    </resources>
+                    <image>${docker.image.prefix}/${project.artifactId}</image>
+                    <newName>${docker.image.prefix}/${project.artifactId}</newName>
+                    <forceTags>true</forceTags>
+                    <imageTags>
+                        <imageTag>${project.version}</imageTag>
+                        <imageTag>latest</imageTag>
+                    </imageTags>
+                    <!-- 如果需要在生成镜像时推送到远程库，pushImage设为true -->
+                    <pushImage>true</pushImage>
+                </configuration>
+            </plugin>
+
+            <!-- end::plugin[] -->
+        </plugins>
+    </build>
+
+</project>
